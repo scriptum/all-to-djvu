@@ -18,6 +18,7 @@ help()
 	$OPT "-c, --cover COVER" "Use COVER as a colored cover for the book"
 	$OPT "-p, --poster COVER" "Use COVER like a cover but posterize it"
 	$OPT "-b, --blur N" "Apply a blur filter of size N"
+	$OPT "-s, --sharp N" "Sharp filter strength (default 1)"
 	$OPT "-g, --gamma N" "Apply a gamma N"
 	$OPT "-l, --level N" "Apply a level N e.g. 10%,90%"
 	$OPT "-k, --keep" "Keep temporary files"
@@ -41,7 +42,9 @@ AUTOLEVEL=""
 COVER=""
 CLEAN="1"
 OUT=out.djvu
-
+SHARP="1"
+UP=""
+DOWN=""
 convert -h | grep -- -auto-level > /dev/null && AUTOLEVEL="-auto-level"
 
 BG="-background white"
@@ -92,11 +95,23 @@ do
 	OUT="$2"
 	shift
 ;;
+-s|--sharp)
+	SHARP="$2"
+	shift
+;;
+-u|--upscale)
+	UP="-resize $2"
+	shift
+;;
+-d|--downscale)
+	DOWN="-resize $2"
+	shift
+;;
 *)
 UNROTATE=""
 UNROTATE="-deskew 40%"
 
-ENHANCE=" $AUTOLEVEL -unsharp 0x3+2+0.3 $BLUR $GAMMA -unsharp 0x10+1+0.3 -contrast-stretch 0.1x1%"
+ENHANCE=" $AUTOLEVEL $BLUR $GAMMA -unsharp 0x10+$SHARP+0 -contrast-stretch 0.1x1%"
 
 THRESHOLD=""
 THRESHOLD="-monochrome"
@@ -108,7 +123,7 @@ FILTER="-negate -median 2x2 -negate"
 FILTER="-paint 1"
 
 
-OPTS="$BG $UNROTATE $LEVEL $ENHANCE $THRESHOLD $FILTER"
+OPTS="$UNROTATE $LEVEL $UP $ENHANCE $DOWN $THRESHOLD $FILTER"
 	if [ ! -f "$1" ]
 	then
 		echo "Cannot find file: $1" > /dev/stderr
