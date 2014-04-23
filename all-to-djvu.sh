@@ -23,11 +23,13 @@ help()
 	$OPT "-l, --level N" "Apply a level N e.g. 10%,90%"
 	$OPT "-k, --keep" "Keep temporary files"
 	$OPT "-o, --out OUT" "File to write result"
+	$OPT "-r, --rotate N" "Rotate each image by N degrees"
+	$OPT "-L, --losslevel N" "Set lossy compression level to N (0-100)"
 }
 
 get_dpi()
 {
-	size=$(identify "$1" | cut -d' ' -f3 | cut -dx -f1)
+	size=$(identify "$1" | grep -o [0-9]*x[0-9]* | head -1 | cut -dx -f1)
 	echo "$size/8.27" | bc
 }
 
@@ -45,7 +47,10 @@ OUT=out.djvu
 SHARP="1"
 UP=""
 DOWN=""
-convert -h | grep -- -auto-level > /dev/null && AUTOLEVEL="-auto-level"
+ROT=""
+LOSSLVL=100
+FILTER="-paint 1"
+#convert -h | grep -- -auto-level > /dev/null && AUTOLEVEL="-auto-level"
 
 BG="-background white"
 
@@ -107,33 +112,50 @@ do
 	DOWN="-resize $2"
 	shift
 ;;
+-r|--rotate)
+	ROT="-rotate $2"
+	shift
+;;
+-f|--filter)
+	case "$2" in
+	median)
+		FILTER="-median 0x1"
+	;;
+	paint)
+		FILTER="-paint 1"
+	;;
+	*)
+		FILTER=""
+	;;
+	esac
+	shift
+;;
 *)
 UNROTATE=""
-UNROTATE="-deskew 40%"
+UNROTATE="-deskew 100%"
 
-ENHANCE=" $AUTOLEVEL $BLUR $GAMMA -unsharp 0x10+$SHARP+0 -contrast-stretch 0.1x1%"
+ENHANCE=" $BLUR $GAMMA -unsharp 0x10+$SHARP+0"
+ENHANCE=" $BLUR $GAMMA -unsharp 0x5+$SHARP+0 ( +clone -blur 0x20 ) -compose Divide_Src -composite -normalize"
 
 THRESHOLD=""
 THRESHOLD="-monochrome"
 THRESHOLD="-threshold 60%"
 
-FILTER="-statistic Mode 2x2"
-FILTER=""
-FILTER="-negate -median 2x2 -negate"
-FILTER="-paint 1"
+#FILTER="-statistic Mode 2x2"
+#FILTER="-negate -median 2x2 -negate"
+#FILTER=""
+#FILTER="-paint 1"
 
 
-OPTS="$UNROTATE $LEVEL $UP $ENHANCE $DOWN $THRESHOLD $FILTER"
+OPTS="$ROT $UNROTATE $LEVEL $AUTOLEVEL $UP $ENHANCE $DOWN $THRESHOLD $FILTER"
 	if [ ! -f "$1" ]
 	then
 		echo "Cannot find file: $1" > /dev/stderr
 	else
-		size=$(identify "$1" | cut -d' ' -f3 | cut -dx -f1)
-		DPI=$(echo "$size/8.27" | bc)
 		NAME=$(printf "%06d" $N)
 		convert "$1" $OPTS .$NAME.pbm
 		#echo PSNR: $(compare -metric PSNR $1 .tmp.pbm /dev/null 2>&1)
-		cjb2 -dpi $DPI -lossy .$NAME.pbm .$NAME.djvu
+		cjb2 -dpi $(get_dpi ".$NAME.pbm") -lossy -losslevel $LOSSLVL .$NAME.pbm .$NAME.djvu
 		
 		echo "$1" $(wc -c < .$NAME.djvu) "bytes"
 		((N++))
@@ -142,8 +164,12 @@ OPTS="$UNROTATE $LEVEL $UP $ENHANCE $DOWN $THRESHOLD $FILTER"
 	esac
 	shift
 done
-
-djvm -c "$OUT" "$COVER" .0*.djvu
+if [ -z "$COVER" ]
+then 
+	djvm -c "$OUT" .0*.djvu
+else
+	djvm -c "$OUT" "$COVER" .0*.djvu
+fi
 
 #convert -compress Group4 .*.pbm out.pdf
 
