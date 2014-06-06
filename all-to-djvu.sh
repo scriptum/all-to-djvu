@@ -9,22 +9,27 @@ checkpackage()
 	fi
 }
 
+OPT() {
+	printf "  %-20s %s\n" "$@"
+}
+
 help()
 {
-	OPT='printf "  %-20s %s\n"'
 	echo "Usage: $0 [options] images..."
 	echo
 	echo "Options:"
-	$OPT "-c, --cover COVER" "Use COVER as a colored cover for the book"
-	$OPT "-p, --poster COVER" "Use COVER like a cover but posterize it"
-	$OPT "-b, --blur N" "Apply a blur filter of size N"
-	$OPT "-s, --sharp N" "Sharp filter strength (default 1)"
-	$OPT "-g, --gamma N" "Apply a gamma N"
-	$OPT "-l, --level N" "Apply a level N e.g. 10%,90%"
-	$OPT "-k, --keep" "Keep temporary files"
-	$OPT "-o, --out OUT" "File to write result"
-	$OPT "-r, --rotate N" "Rotate each image by N degrees"
-	$OPT "-L, --losslevel N" "Set lossy compression level to N (0-100)"
+	OPT "-c, --cover COVER" "Use COVER as a colored cover for the book"
+	OPT "-p, --poster COVER" "Use COVER like a cover but posterize it"
+	OPT "-b, --blur N" "Apply a blur filter of size N"
+	OPT "-s, --sharp N" "Sharp filter strength (default 1)"
+	OPT "-g, --gamma N" "Apply a gamma N"
+	OPT "-l, --level N" "Apply a level N e.g. 10%,90%"
+	OPT "-k, --keep" "Keep temporary files"
+	OPT "-o, --out OUT" "File to write result"
+	OPT "-r, --rotate N" "Rotate each image by N degrees"
+	OPT "-L, --losslevel N" "Set lossy compression level to N (0-100)"
+	OPT "-P, --PDF" "Export to PDF as well as to djvu"
+	exit -1
 }
 
 get_dpi()
