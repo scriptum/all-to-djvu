@@ -55,6 +55,7 @@ DOWN=""
 ROT=""
 LOSSLVL=100
 FILTER="-paint 1"
+PDF=""
 #convert -h | grep -- -auto-level > /dev/null && AUTOLEVEL="-auto-level"
 
 BG="-background white"
@@ -183,7 +184,10 @@ else
 	djvm -c "$OUT" "$COVER" .0*.djvu
 fi
 
-#convert -compress Group4 .*.pbm out.pdf
+if [ "$PDF" = "1" ]
+then
+	convert -density 300 -compress Group4 .*.pbm out.pdf
+fi
 
 if [ "$CLEAN" = "1" ]
 then
