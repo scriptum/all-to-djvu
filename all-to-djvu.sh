@@ -18,17 +18,17 @@ help()
 	echo "Usage: $0 [options] images..."
 	echo
 	echo "Options:"
-	OPT "-c, --cover COVER" "Use COVER as a colored cover for the book"
-	OPT "-p, --poster COVER" "Use COVER like a cover but posterize it"
-	OPT "-b, --blur N" "Apply a blur filter of size N"
-	OPT "-s, --sharp N" "Sharp filter strength (default 1)"
-	OPT "-g, --gamma N" "Apply a gamma N"
-	OPT "-l, --level N" "Apply a level N e.g. 10%,90%"
-	OPT "-k, --keep" "Keep temporary files"
-	OPT "-o, --out OUT" "File to write result"
-	OPT "-r, --rotate N" "Rotate each image by N degrees"
-	OPT "-L, --losslevel N" "Set lossy compression level to N (0-100)"
-	OPT "-P, --PDF" "Export to PDF as well as to djvu"
+	OPT "-c, --cover COVER"		"Use COVER as a colored cover for the book"
+	OPT "-p, --poster COVER"	"Use COVER like a cover but posterize it"
+	OPT "-b, --blur N"		"Apply a blur filter of size N"
+	OPT "-s, --sharp N"		"Sharp filter strength (default 1)"
+	OPT "-g, --gamma N"		"Apply a gamma N"
+	OPT "-l, --level N"		"Apply a level N e.g. 10%,90%"
+	OPT "-k, --keep"		"Keep temporary files"
+	OPT "-o, --out OUT"		"File to write result"
+	OPT "-r, --rotate N"		"Rotate each image by N degrees"
+	OPT "-L, --losslevel N"		"Set lossy compression level to N (0-100)"
+	OPT "-P, --PDF"			"Export to PDF as well as to djvu"
 	exit -1
 }
 
@@ -42,9 +42,14 @@ checkpackage djvm djvulibre
 checkpackage c44 djvulibre
 checkpackage convert ImageMagick
 
+#use compact tif instead of fat PBM
+PIXMAP_FORMAT=tif
+
 BLUR=""
 GAMMA=""
+GAMMA="-gamma 0.7"
 LEVEL=""
+LEVEL="-level 10%,90%"
 AUTOLEVEL=""
 COVER=""
 CLEAN="1"
@@ -146,12 +151,13 @@ do
 		UNROTATE=""
 		UNROTATE="-deskew 100%"
 
-		ENHANCE=" $BLUR $GAMMA -unsharp 0x10+$SHARP+0"
-		ENHANCE=" $BLUR $GAMMA -unsharp 0x5+$SHARP+0 ( +clone -blur 0x20 ) -compose Divide_Src -composite -normalize"
+		ENHANCE=" $BLUR $GAMMA -unsharp 0x3+$SHARP+0"
+		ENHANCE=" $BLUR $GAMMA -sharpen ${SHARP}x3"
+		#ENHANCE+=" ( +clone -scale 25% -blur 0x3 -scale 400% ) -compose Divide_Src -composite -normalize"
 
 		#THRESHOLD=""
 		#THRESHOLD="-monochrome"
-		THRESHOLD="-threshold 60%"
+		THRESHOLD="-threshold 50%"
 
 		#FILTER="-statistic Mode 2x2"
 		#FILTER="-negate -median 2x2 -negate"
@@ -165,9 +171,9 @@ do
 			echo "Cannot find file: $1" > /dev/stderr
 		else
 			NAME=$(printf "%06d" $N)
-			convert "$1" $OPTS .$NAME.pbm
-			#echo PSNR: $(compare -metric PSNR $1 .tmp.pbm /dev/null 2>&1)
-			cjb2 -dpi $(get_dpi ".$NAME.pbm") -lossy -losslevel $LOSSLVL .$NAME.pbm .$NAME.djvu
+			convert "$1" $OPTS .$NAME.$PIXMAP_FORMAT
+			#echo PSNR: $(compare -metric PSNR $1 .tmp.$PIXMAP_FORMAT /dev/null 2>&1)
+			cjb2 -dpi $(get_dpi ".$NAME.$PIXMAP_FORMAT") -lossy -losslevel $LOSSLVL .$NAME.$PIXMAP_FORMAT .$NAME.djvu
 			
 			echo "$1" $(wc -c < .$NAME.djvu) "bytes"
 			((N++))
@@ -186,12 +192,12 @@ fi
 
 if [ "$PDF" = "1" ]
 then
-	convert -density 300 -compress Group4 .*.pbm out.pdf
+	convert -density 300 -compress Group4 .*.$PIXMAP_FORMAT out.pdf
 fi
 
 if [ "$CLEAN" = "1" ]
 then
-	rm -f .*.pbm
+	rm -f .*.$PIXMAP_FORMAT
 	rm -f .*.ppm
 	rm -f .*.djvu
 fi
